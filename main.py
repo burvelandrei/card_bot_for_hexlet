@@ -1,8 +1,8 @@
-from random import choice
 from os import getenv
 from dotenv import load_dotenv, find_dotenv
 from telebot import TeleBot
-
+from filters import is_card
+from services import get_random_card
 
 # Загрузка токена из переменной окружения
 load_dotenv(find_dotenv())
@@ -16,15 +16,6 @@ CARD_SUIT: list = ["Ч", "Б", "К", "П"]
 ATTEMPTS = 3
 # Словарь, в котором будут храниться данные пользователя
 users: dict = {}
-
-
-# Функция возвращающая случайную карту
-def get_random_card():
-    random_number: str = choice(CARD_NUMBER)
-    random_suit: str = choice(CARD_SUIT)
-    if random_suit in ["Ч", "Б"]:
-        return [f"{random_number}{random_suit}", "красная"]
-    return [f"{random_number}{random_suit}", "черная"]
 
 
 # Этот хэндлер будет срабатывать на команду "/start"
@@ -95,7 +86,7 @@ def process_cancel(message):
 def process_begin(message):
     if not users[message.from_user.id]["in_game"]:
         users[message.from_user.id]["in_game"] = True
-        users[message.from_user.id]["secret_card"] = get_random_card()
+        users[message.from_user.id]["secret_card"] = get_random_card(CARD_NUMBER, CARD_SUIT)
         users[message.from_user.id]["attempts"] = ATTEMPTS
         bot.send_message(
             message.from_user.id,
@@ -118,12 +109,7 @@ def process_begin(message):
 def process_game(message):
     if users[message.from_user.id]["in_game"]:
         check_win = False
-        if (
-            message.text.split()[0].lower()
-            == users[message.from_user.id]["secret_card"][1]
-            and message.text.split()[1]
-            == users[message.from_user.id]["secret_card"][0][1]
-        ):
+        if is_card(message.text, users, message.from_user.id):
             users[message.from_user.id]["in_game"] = False
             users[message.from_user.id]["wins"] += 1
             users[message.from_user.id]["total_games"] += 1
